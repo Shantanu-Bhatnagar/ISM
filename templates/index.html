@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniStore ISM — Enterprise Information Storage & Management Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="dark-theme">
+    <!-- Top Bar -->
+    <header class="app-header">
+        <div class="header-brand">
+            <div class="brand-logo-icon">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+                    <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+                    <line x1="6" y1="6" x2="6.01" y2="6"></line>
+                    <line x1="6" y1="18" x2="6.01" y2="18"></line>
+                </svg>
+            </div>
+            <div>
+                <h1 class="brand-title">OmniStore <span class="accent-text">ISM</span></h1>
+                <span class="brand-subtitle">Enterprise Storage, SAN & Information Lifecycle Management Lab</span>
+            </div>
+        </div>
+
+        <div class="header-status-group">
+            <div class="status-pill status-healthy" id="controllerStatusPill">
+                <span class="pulse-dot"></span>
+                <span id="controllerStatusText">ARRAY HEALTHY</span>
+            </div>
+            <div class="dc-indicator" id="activeDcBadge">
+                <span class="dc-icon">🏢</span>
+                <span id="activeDcText">Site A (Primary DC - NY)</span>
+            </div>
+            <div class="workload-selector">
+                <label for="workloadSelect">Workload Profile:</label>
+                <select id="workloadSelect" onchange="changeWorkload(this.value)">
+                    <option value="OLTP_BALANCED">OLTP Balanced (8KB Random)</option>
+                    <option value="HIGH_THROUGHPUT_STREAMING">Streaming Data (1MB Seq)</option>
+                    <option value="BACKUP_STORM">Backup Burst Storm</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="main-nav">
+        <button class="nav-tab active" data-tab="tab-overview" onclick="switchTab('tab-overview')">
+            <span class="tab-icon">📊</span> Overview & Telemetry
+        </button>
+        <button class="nav-tab" data-tab="tab-raid" onclick="switchTab('tab-raid')">
+            <span class="tab-icon">🛡️</span> RAID & Parity Engine
+        </button>
+        <button class="nav-tab" data-tab="tab-dedupe" onclick="switchTab('tab-dedupe')">
+            <span class="tab-icon">🧬</span> Deduplication & Compression
+        </button>
+        <button class="nav-tab" data-tab="tab-tiering" onclick="switchTab('tab-tiering')">
+            <span class="tab-icon">⚡</span> Storage Tiering & ILM
+        </button>
+        <button class="nav-tab" data-tab="tab-san" onclick="switchTab('tab-san')">
+            <span class="tab-icon">🌐</span> SAN Fabric & LUNs
+        </button>
+        <button class="nav-tab" data-tab="tab-dr" onclick="switchTab('tab-dr')">
+            <span class="tab-icon">🔄</span> DR, Snapshots & Replication
+        </button>
+        <button class="nav-tab" data-tab="tab-security" onclick="switchTab('tab-security')">
+            <span class="tab-icon">🔒</span> Storage Security & Audit
+        </button>
+        <button class="nav-tab highlight-tab" data-tab="tab-pipeline" onclick="switchTab('tab-pipeline')">
+            <span class="tab-icon">🚀</span> End-to-End Ingestion Lab
+        </button>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="main-content">
+
+        <!-- ================= TAB 1: OVERVIEW ================= -->
+        <section id="tab-overview" class="tab-pane active">
+            <div class="telemetry-bar">
+                <div class="stat-card">
+                    <div class="stat-label">Live IOPS</div>
+                    <div class="stat-value" id="liveIops">14,850</div>
+                    <div class="stat-sub">Random I/O operations/sec</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Throughput Bandwidth</div>
+                    <div class="stat-value" id="liveThroughput">116.0 <span class="unit">MB/s</span></div>
+                    <div class="stat-sub">FC SAN Fabric aggregate</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Response Time / Latency</div>
+                    <div class="stat-value" id="liveLatency">1.2 <span class="unit">ms</span></div>
+                    <div class="stat-sub">Queue + Seek + Transfer</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Cache Hit Ratio</div>
+                    <div class="stat-value" id="liveCacheHit">91.4<span class="unit">%</span></div>
+                    <div class="stat-sub">Storage Array NVRAM Cache</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Capacity Runway</div>
+                    <div class="stat-value" id="liveRunway">148 <span class="unit">Days</span></div>
+                    <div class="stat-sub" id="liveRunwaySub">At 14.5 GB / day consumption</div>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <!-- Module Summary Card: RAID -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <h3><span class="icon">🛡️</span> RAID Array Engine</h3>
+                        <span class="badge badge-cyan" id="ovRaidLevel">RAID 5</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="summary-desc">Hardware-level striping and distributed XOR parity for zero data loss.</p>
+                        <div class="metric-row">
+                            <span>Status:</span>
+                            <strong class="text-success" id="ovRaidHealth">HEALTHY</strong>
+                        </div>
+                        <div class="metric-row">
+                            <span>Online Disks:</span>
+                            <strong id="ovRaidDisks">4 Physical Drives + 1 Hot Spare</strong>
+                        </div>
+                        <div class="metric-actions">
+                            <button class="btn btn-outline" onclick="switchTab('tab-raid')">Manage Array & Test Failures →</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Module Summary Card: Deduplication -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <h3><span class="icon">🧬</span> Data Deduplication</h3>
+                        <span class="badge badge-purple" id="ovDedupRatio">3.2:1</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="summary-desc">SHA-256 chunk hashing eliminates redundant blocks before physical commit.</p>
+                        <div class="metric-row">
+                            <span>Storage Saved:</span>
+                            <strong class="text-accent" id="ovDedupSaved">68.7%</strong>
+                        </div>
+                        <div class="metric-row">
+                            <span>Indexed Recipes:</span>
+                            <strong id="ovDedupFiles">3 Files Ingested</strong>
+                        </div>
+                        <div class="metric-actions">
+                            <button class="btn btn-outline" onclick="switchTab('tab-dedupe')">Inspect Block Hash Table →</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Module Summary Card: Tiering -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <h3><span class="icon">⚡</span> Storage Tiering & ILM</h3>
+                        <span class="badge badge-amber">3 Tiers Active</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="summary-desc">Automated lifecycle migration across NVMe SSD, SAS HDD, and Deep Cloud Archive.</p>
+                        <div class="metric-row">
+                            <span>Cost Optimization:</span>
+                            <strong class="text-success" id="ovIlmSavings">$724.50 / Month Saved</strong>
+                        </div>
+                        <div class="metric-row">
+                            <span>Active Objects:</span>
+                            <strong id="ovIlmObjects">6 Data Volumes Tracked</strong>
+                        </div>
+                        <div class="metric-actions">
+                            <button class="btn btn-outline" onclick="switchTab('tab-tiering')">View Temperature Heatmap →</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Module Summary Card: SAN Fabric -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <h3><span class="icon">🌐</span> SAN Storage Pool & LUNs</h3>
+                        <span class="badge badge-blue" id="ovSanUsage">57% Allocated</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="summary-desc">Storage virtualization, Thin vs Thick provisioning, LUN masking & FC fabric zoning.</p>
+                        <div class="metric-row">
+                            <span>Total Raw Pool:</span>
+                            <strong id="ovSanPool">5,000 GB</strong>
+                        </div>
+                        <div class="metric-row">
+                            <span>Provisioned LUNs:</span>
+                            <strong id="ovSanLuns">2 Active LUNs</strong>
+                        </div>
+                        <div class="metric-actions">
+                            <button class="btn btn-outline" onclick="switchTab('tab-san')">Configure LUNs & Zoning →</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Module Summary Card: Disaster Recovery -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <h3><span class="icon">🔄</span> Disaster Recovery (DR)</h3>
+                        <span class="badge badge-emerald" id="ovDrMode">SYNCHRONOUS</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="summary-desc">Multi-site replication, Copy-on-Write (CoW) point-in-time snapshots, RPO/RTO.</p>
+                        <div class="metric-row">
+                            <span>Recovery Point Objective (RPO):</span>
+                            <strong class="text-accent" id="ovDrRpo">0.0 sec (Zero Loss)</strong>
+                        </div>
+                        <div class="metric-row">
+                            <span>Recovery Time Objective (RTO):</span>
+                            <strong id="ovDrRto">2.5 min</strong>
+                        </div>
+                        <div class="metric-actions">
+                            <button class="btn btn-outline" onclick="switchTab('tab-dr')">Simulate Failover / Snapshots →</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Module Summary Card: Security & Audit -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <h3><span class="icon">🔒</span> Storage Security & KMS</h3>
+                        <span class="badge badge-cyan">AES-256-XTS</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="summary-desc">Encryption at rest, Role-Based Access Control, and cryptographically chained audit logs.</p>
+                        <div class="metric-row">
+                            <span>Audit Chain Integrity:</span>
+                            <strong class="text-success">VERIFIED SECURE</strong>
+                        </div>
+                        <div class="metric-row">
+                            <span>Key Management:</span>
+                            <strong>Hardware Vault Protected</strong>
+                        </div>
+                        <div class="metric-actions">
+                            <button class="btn btn-outline" onclick="switchTab('tab-security')">Inspect Cryptographic Audit →</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 2: RAID ENGINE ================= -->
+        <section id="tab-raid" class="tab-pane">
+            <div class="section-title-bar">
+                <div>
+                    <h2>RAID Architecture & Parity Fault Tolerance Engine</h2>
+                    <p class="section-subtitle">Real-time bitwise striping, distributed XOR parity calculations, degraded-mode dynamic reconstruction, and hot-spare recovery.</p>
+                </div>
+                <div class="control-actions">
+                    <div class="select-group">
+                        <label for="raidLevelSelector">Architecture:</label>
+                        <select id="raidLevelSelector" onchange="onRaidConfigChange()">
+                            <option value="5" selected>RAID 5 (Block Striping with Distributed Parity)</option>
+                            <option value="6">RAID 6 (Dual Distributed Parity P + Q)</option>
+                            <option value="1">RAID 1 (Disk Mirroring)</option>
+                            <option value="0">RAID 0 (Data Striping - No Parity)</option>
+                            <option value="10">RAID 10 (Striped Mirrors 1+0)</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-secondary" onclick="resetRaidArray()">Apply Config & Reset Disks</button>
+                </div>
+            </div>
+
+            <!-- Visual Physical Disk Enclosure -->
+            <div class="disk-enclosure-card">
+                <div class="enclosure-header">
+                    <div class="enclosure-title">
+                        <span class="icon">🗄️</span> Physical Storage Enclosure (SAS 12Gbps Backplane)
+                    </div>
+                    <div class="enclosure-status">
+                        Array Status: <span class="badge" id="raidArrayStatusBadge">HEALTHY</span>
+                    </div>
+                </div>
+
+                <div class="disks-container" id="raidDisksContainer">
+                    <!-- Disks dynamically populated by JS -->
+                </div>
+
+                <div class="hot-spare-container">
+                    <div class="hot-spare-card" id="hotSpareCard">
+                        <div class="drive-icon">💾</div>
+                        <div class="drive-name">Hot Spare Drive 1</div>
+                        <div class="drive-state">STANDBY READY</div>
+                        <div class="drive-spec">32 Blocks Capacity</div>
+                    </div>
+                    <div class="hot-spare-explanation">
+                        <strong>Hot Spare Policy:</strong> If a physical drive fails in a parity RAID array (RAID 5 or RAID 6), the controller automatically or manually engages this spare to reconstruct lost data blocks using mathematical parity XOR: $D_{rec} = P \oplus \sum D_{surviving}$.
+                    </div>
+                </div>
+            </div>
+
+            <!-- RAID Operations Console -->
+            <div class="two-column-grid">
+                <div class="glass-card">
+                    <div class="card-header">
+                        <h3>Write Data Stripe & Calculate Parity</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label for="raidFileId">File Identifier:</label>
+                            <input type="text" id="raidFileId" value="FINANCIAL_LEDGER_2026" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="raidDataContent">Data Payload to Stripe Across Disks:</label>
+                            <textarea id="raidDataContent" class="form-textarea" rows="3">ENTERPRISE TRANSACTION BATCH #98432 - CONFIDENTIAL STORAGE DATA VERIFIED</textarea>
+                        </div>
+                        <button class="btn btn-primary" onclick="writeRaidData()">Stripe Data & Compute Parity</button>
+
+                        <div class="write-trace-log" id="raidWriteTrace">
+                            <div class="trace-empty">Write data to view block distribution and striping trace across drives.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <div class="card-header">
+                        <h3>Parity Math Inspector & Read Recovery</h3>
+                    </div>
+                    <div class="card-body">
+                        <p class="summary-desc">Step-by-step XOR binary parity calculation recorded by the controller:</p>
+                        <div class="parity-equations-list" id="parityEquationsList">
+                            <div class="trace-empty">Parity equations will display here when data is written.</div>
+                        </div>
+
+                        <div class="recovery-box">
+                            <h4>Read Data & Verify Degraded Recovery:</h4>
+                            <p class="text-muted">Test reading a file after failing one of the drives. Watch the controller recover missing data blocks in-flight using surviving blocks and parity!</p>
+                            <div class="input-action-row">
+                                <input type="text" id="raidReadTarget" value="FINANCIAL_LEDGER_2026" class="form-input" placeholder="File Identifier">
+                                <button class="btn btn-secondary" onclick="readRaidData()">Read / Reconstruct</button>
+                            </div>
+                            <div id="raidReadResult" class="read-result-box"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 3: DEDUPLICATION ================= -->
+        <section id="tab-dedupe" class="tab-pane">
+            <div class="section-title-bar">
+                <div>
+                    <h2>Data Deduplication & Compression Engine</h2>
+                    <p class="section-subtitle">Content-addressable SHA-256 chunk hashing, reference-counted block index, and automatic space reclamation through garbage collection.</p>
+                </div>
+                <button class="btn btn-danger-outline" onclick="clearDedupeIndex()">Reset Dedupe Index</button>
+            </div>
+
+            <!-- Dedupe Metrics Ribbon -->
+            <div class="telemetry-bar">
+                <div class="stat-card">
+                    <div class="stat-label">Deduplication Ratio</div>
+                    <div class="stat-value text-accent" id="dedupeRatioDisplay">3.4:1</div>
+                    <div class="stat-sub">Raw Data vs Physical Blocks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Space Savings</div>
+                    <div class="stat-value text-success" id="dedupeSavingsPercent">70.6%</div>
+                    <div class="stat-sub" id="dedupeSavingsBytes">Saved 1,420 Bytes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Virtual Raw Ingested</div>
+                    <div class="stat-value" id="dedupeVirtualBytes">2,015 B</div>
+                    <div class="stat-sub">Uncompressed size</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Unique Physical Stored</div>
+                    <div class="stat-value" id="dedupePhysicalBytes">595 B</div>
+                    <div class="stat-sub">Compressed: <span id="dedupeCompressedBytes">340 B</span></div>
+                </div>
+            </div>
+
+            <div class="two-column-grid">
+                <!-- Ingestion Form -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <h3>Ingest Data for Deduplication Analysis</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label for="dedupeFilename">Virtual Filename:</label>
+                            <input type="text" id="dedupeFilename" value="daily_backup_snapshot.sql" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="dedupeContent">File Content (Try pasting repetitive or modified text):</label>
+                            <textarea id="dedupeContent" class="form-textarea" rows="4">ACME FINANCIAL Q1 2026: TOTAL REVENUE $48M. CONFIDENTIAL STORAGE DATA. ENTERPRISE REPEATED BLOCK DATA BLOCK DATA</textarea>
+                        </div>
+                        <div class="button-group">
+                            <button class="btn btn-primary" onclick="ingestDedupeData()">Ingest & Chunk File</button>
+                            <button class="btn btn-outline" onclick="loadDuplicateSample()">Insert Similar Duplicate Version</button>
+                        </div>
+
+                        <div class="active-files-box">
+                            <h4>Ingested File Recipes in Storage:</h4>
+                            <div id="dedupeFilesList" class="file-badges-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Block Hash Table -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <h3>Unique Physical Block Index (SHA-256 Hash Table)</h3>
+                        <span class="badge badge-purple" id="dedupeUniqueCount">14 Blocks</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="summary-desc">When identical chunks are detected, the controller creates pointer references instead of storing redundant physical blocks.</p>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Block ID</th>
+                                        <th>SHA-256 Hash Fingerprint</th>
+                                        <th>Ref Count</th>
+                                        <th>Raw Size</th>
+                                        <th>Compressed</th>
+                                        <th>Preview</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dedupeBlockTableBody">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 4: STORAGE TIERING & ILM ================= -->
+        <section id="tab-tiering" class="tab-pane">
+            <div class="section-title-bar">
+                <div>
+                    <h2>Information Lifecycle Management (ILM) & Automated Storage Tiering</h2>
+                    <p class="section-subtitle">Dynamic data migration across NVMe SSD, Enterprise SAS HDD, and Deep Cloud Archive based on access frequency and temperature.</p>
+                </div>
+                <div class="control-actions">
+                    <button class="btn btn-secondary" onclick="advanceIlmTime()">⏱️ Advance Time (+3 Cycles)</button>
+                    <button class="btn btn-primary" onclick="runIlmMigration()">⚡ Execute Automated ILM Policies</button>
+                </div>
+            </div>
+
+            <!-- 3 Storage Tiers Cards -->
+            <div class="tiers-container" id="storageTiersContainer">
+                <!-- Populated dynamically: Tier 1, Tier 2, Tier 3 -->
+            </div>
+
+            <!-- Cost Optimization Banner -->
+            <div class="cost-savings-banner" id="ilmCostBanner">
+                <div class="cost-icon">💰</div>
+                <div class="cost-details">
+                    <h3>Enterprise Tiering Cost Optimization</h3>
+                    <p id="costBannerExplanation">Storing all 1,065 GB in Tier 1 NVMe would cost <strong>$1,278.00 / month</strong>. By placing cold and warm data in Tier 2 and Tier 3, your monthly cost is only <strong>$553.50 / month</strong>.</p>
+                </div>
+                <div class="cost-stat">
+                    <div class="cost-val" id="costSavingsAmount">$724.50</div>
+                    <div class="cost-label">Monthly Savings (56.7%)</div>
+                </div>
+            </div>
+
+            <!-- Data Objects & Access Heatmap -->
+            <div class="two-column-grid">
+                <div class="glass-card">
+                    <div class="card-header">
+                        <h3>Storage Volumes Heatmap & Temperature</h3>
+                        <span class="badge badge-amber" id="ilmCurrentTick">Simulation Cycle: 0</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="summary-desc">Click <strong>"Access"</strong> on any object to generate real I/O and warm it up to HOT (promotes to NVMe SSD). Click <strong>"Advance Time"</strong> to cool idle data down to COLD (demotes to Cloud Archive).</p>
+                        <div class="objects-heatmap-grid" id="objectsHeatmapGrid">
+                            <!-- Populated by JS -->
+                        </div>
+
+                        <div class="add-object-inline">
+                            <h4>Provision New Data Object:</h4>
+                            <div class="input-action-row">
+                                <input type="text" id="newObjName" placeholder="dataset_ml_training.h5" class="form-input">
+                                <input type="number" id="newObjSize" placeholder="Size (GB)" value="60" class="form-input" style="max-width: 120px;">
+                                <select id="newObjTier" class="form-input" style="max-width: 140px;">
+                                    <option value="1">Tier 1 (SSD)</option>
+                                    <option value="2">Tier 2 (HDD)</option>
+                                    <option value="3">Tier 3 (Cloud)</option>
+                                </select>
+                                <button class="btn btn-secondary" onclick="allocateNewObject()">Allocate</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <div class="card-header">
+                        <h3>Recent ILM Policy Migration Log</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="migration-log-list" id="ilmMigrationsList">
+                            <div class="trace-empty">Run ILM policies to observe automated object promotions and demotions.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 5: SAN & LUN ================= -->
+        <section id="tab-san" class="tab-pane">
+            <div class="section-title-bar">
+                <div>
+                    <h2>Storage Area Network (SAN) & LUN Management</h2>
+                    <p class="section-subtitle">Enterprise Storage Pools, Thin vs Thick LUN Provisioning, Fibre Channel / iSCSI Fabric Zoning, and LUN Masking.</p>
+                </div>
+            </div>
+
+            <!-- Storage Pool Gauge -->
+            <div class="storage-pool-card">
+                <div class="pool-header">
+                    <h3>Enterprise RAID-Protected Storage Pool</h3>
+                    <div class="pool-stats">
+                        <span id="poolAllocatedVal">2,850 GB Allocated</span> / <span id="poolTotalVal">5,000 GB Capacity</span>
+                        (<span id="poolUsagePctVal">57.0%</span>)
+                    </div>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="poolProgressBar" style="width: 57%;"></div>
+                </div>
+                <div class="pool-footer-metrics">
+                    <div>Virtual Provisioned: <strong id="poolVirtualTotal">4,000 GB</strong></div>
+                    <div>Oversubscription Ratio: <strong class="text-accent" id="poolOversubRatio">0.80:1</strong></div>
+                    <div>Remaining Free: <strong class="text-success" id="poolFreeGb">2,150 GB</strong></div>
+                </div>
+            </div>
+
+            <div class="two-column-grid">
+                <!-- LUN Provisioning -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <h3>Provision Logical Unit Number (LUN)</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label for="lunName">LUN Name:</label>
+                            <input type="text" id="lunName" value="LUN_Analytics_Warehouse" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="lunSize">Advertised Virtual Capacity (GB):</label>
+                            <input type="number" id="lunSize" value="1000" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label>Provisioning Architecture:</label>
+                            <div class="radio-group">
+                                <label class="radio-label">
+                                    <input type="radio" name="lunProvType" value="THIN" checked>
+                                    <strong>Thin Provisioning</strong> (Allocate blocks on demand, high efficiency)
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="lunProvType" value="THICK">
+                                    <strong>Thick Provisioning</strong> (Pre-allocate 100% space upfront)
+                                </label>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="createLun()">Provision LUN into Pool</button>
+
+                        <div class="luns-list-container">
+                            <h4>Active Provisioned LUNs:</h4>
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>LUN ID</th>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Virtual Size</th>
+                                            <th>Allocated Space</th>
+                                            <th>Attached Initiators</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="lunsTableBody">
+                                        <!-- Populated by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SAN Fabric Zoning & LUN Masking -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <h3>SAN Fabric Zoning & LUN Masking</h3>
+                    </div>
+                    <div class="card-body">
+                        <p class="summary-desc">LUN Masking restricts host access to specific LUNs at the storage array controller port. Fabric Zoning isolates SAN switch traffic.</p>
+                        
+                        <div class="zoning-section">
+                            <h4>Active Fabric Zones (FC Switch 1):</h4>
+                            <div id="sanZonesList" class="zones-badge-list"></div>
+                        </div>
+
+                        <div class="masking-section">
+                            <h4>LUN Masking Access Matrix:</h4>
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Target LUN</th>
+                                            <th>Host Initiator (WWN / IQN)</th>
+                                            <th>Access Status</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="maskingTableBody">
+                                        <!-- Populated by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 6: DISASTER RECOVERY & REPLICATION ================= -->
+        <section id="tab-dr" class="tab-pane">
+            <div class="section-title-bar">
+                <div>
+                    <h2>Disaster Recovery, Copy-on-Write Snapshots & Multi-Site Replication</h2>
+                    <p class="section-subtitle">RPO (Recovery Point Objective) & RTO (Recovery Time Objective) simulations, Synchronous vs Asynchronous WAN replication, and live Site Failover.</p>
+                </div>
+            </div>
+
+            <!-- Two Data Centers Visual Map -->
+            <div class="dc-topology-container">
+                <!-- Site A -->
+                <div class="dc-card" id="dcCardA">
+                    <div class="dc-card-header">
+                        <span class="dc-flag">🇺🇸</span>
+                        <div>
+                            <h3>Site A (Primary DC - New York)</h3>
+                            <span class="badge badge-emerald" id="siteAStatusBadge">ONLINE PRIMARY</span>
+                        </div>
+                    </div>
+                    <div class="dc-card-body">
+                        <div class="storage-blocks-preview" id="siteABlocksGrid"></div>
+                    </div>
+                </div>
+
+                <!-- Replication Link -->
+                <div class="replication-link-card">
+                    <div class="link-label" id="repModeLabel">SYNCHRONOUS REPLICATION</div>
+                    <div class="link-animation-line">
+                        <div class="link-pulse-packet"></div>
+                    </div>
+                    <div class="link-metrics">
+                        <div>Latency: <strong id="linkLatencyVal">4.2 ms</strong></div>
+                        <div>WAN Pipe: <strong>1.0 Gbps Dark Fiber</strong></div>
+                        <div>Pending Queue: <strong id="repQueueVal">0 Blocks</strong></div>
+                    </div>
+                    <div class="link-controls">
+                        <label>Replication Protocol:</label>
+                        <select id="drModeSelect" onchange="changeReplicationMode(this.value)">
+                            <option value="SYNCHRONOUS" selected>Synchronous (Zero RPO, Higher Latency)</option>
+                            <option value="ASYNCHRONOUS">Asynchronous (Buffered, Low Host Latency)</option>
+                        </select>
+                        <button class="btn btn-outline btn-xs" id="flushQueueBtn" onclick="flushDrQueue()" style="display:none; margin-top:8px;">Flush Pending Queue</button>
+                    </div>
+                </div>
+
+                <!-- Site B -->
+                <div class="dc-card" id="dcCardB">
+                    <div class="dc-card-header">
+                        <span class="dc-flag">🇩🇪</span>
+                        <div>
+                            <h3>Site B (Remote DR Site - Frankfurt)</h3>
+                            <span class="badge badge-blue" id="siteBStatusBadge">STANDBY REPLICA</span>
+                        </div>
+                    </div>
+                    <div class="dc-card-body">
+                        <div class="storage-blocks-preview" id="siteBBlocksGrid"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DR Metrics Bar -->
+            <div class="telemetry-bar">
+                <div class="stat-card">
+                    <div class="stat-label">Recovery Point Objective (RPO)</div>
+                    <div class="stat-value text-accent" id="drRpoVal">0.0 <span class="unit">sec</span></div>
+                    <div class="stat-sub">Maximum acceptable data loss</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Recovery Time Objective (RTO)</div>
+                    <div class="stat-value text-cyan" id="drRtoVal">2.5 <span class="unit">min</span></div>
+                    <div class="stat-sub">Maximum downtime to restore</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Active Serving DC</div>
+                    <div class="stat-value text-success" id="drActiveDcVal" style="font-size: 1.2rem;">Site A (NY)</div>
+                    <div class="stat-sub">Current production traffic master</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Disaster Actions</div>
+                    <div class="button-group" style="margin-top: 5px;">
+                        <button class="btn btn-danger btn-sm" id="btnDisasterFailover" onclick="triggerDrFailover()">⚡ Simulate Disaster at Site A</button>
+                        <button class="btn btn-secondary btn-sm" id="btnDisasterFailback" onclick="triggerDrFailback()" style="display: none;">🔄 Restore & Failback</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Snapshots Console -->
+            <div class="two-column-grid">
+                <div class="glass-card">
+                    <div class="card-header">
+                        <h3>Copy-on-Write (CoW) Point-in-Time Snapshots</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="input-action-row">
+                            <input type="text" id="snapshotNameInput" placeholder="Snapshot_Before_Upgrade" class="form-input">
+                            <button class="btn btn-primary" onclick="createSnapshot()">Create Snapshot</button>
+                        </div>
+
+                        <div class="snapshots-timeline" id="snapshotsTimeline">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <div class="card-header">
+                        <h3>Write to Storage & Test CoW Preservation</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label for="drBlockIdx">Target Block Slot (0 - 3):</label>
+                            <input type="number" id="drBlockIdx" value="2" min="0" max="3" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="drBlockData">New Block Payload:</label>
+                            <input type="text" id="drBlockData" value="DB_TRANSACTION_PAYMENT_#999" class="form-input">
+                        </div>
+                        <button class="btn btn-secondary" onclick="writeDrBlock()">Write Block with CoW & Replicate</button>
+
+                        <div class="dr-events-log" id="drEventsLog">
+                            <h4>Disaster Recovery Audit Log:</h4>
+                            <div id="drEventsList" class="events-list"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 7: SECURITY & AUDIT ================= -->
+        <section id="tab-security" class="tab-pane">
+            <div class="section-title-bar">
+                <div>
+                    <h2>Storage Security, Encryption & Tamper-Evident Audit Logging</h2>
+                    <p class="section-subtitle">AES-256 data-at-rest encryption, Role-Based Access Control (RBAC), and cryptographically chained audit trails for compliance.</p>
+                </div>
+                <button class="btn btn-outline" onclick="verifyAuditIntegrity()">🛡️ Verify Audit Chain Cryptographic Integrity</button>
+            </div>
+
+            <div class="two-column-grid">
+                <!-- AES-256 Volume Encryption Engine -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <h3>AES-256 At-Rest Cryptographic Vault</h3>
+                        <span class="badge badge-cyan">KMS Armed</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="kms-key-info">
+                            <div>Master Key: <strong>KMS-KEY-AES256-VAULT-01</strong></div>
+                            <div>Key Fingerprint: <code id="secKeyFingerprint">782e4f0a...</code></div>
+                            <div>Cipher: <strong>AES-256-XTS (FIPS 140-3 Compliant)</strong></div>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 15px;">
+                            <label for="encryptInput">Plaintext Data to Encrypt:</label>
+                            <input type="text" id="encryptInput" value="PATIENT_HEALTH_RECORDS_SSN_982-41-8832" class="form-input">
+                        </div>
+                        <button class="btn btn-primary" onclick="testEncrypt()">Encrypt with Hardware Key</button>
+
+                        <div class="crypto-result-box" id="encryptResultBox" style="display: none; margin-top: 12px;">
+                            <label>Ciphertext (Stored on Physical Disks):</label>
+                            <pre id="cipherOutputText"></pre>
+                            <button class="btn btn-outline btn-xs" onclick="testDecrypt()">Decrypt & Verify</button>
+                            <div id="decryptOutputText" class="decrypt-verified"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cryptographically Chained Audit Trail -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <h3>Immutable Storage Audit Trail</h3>
+                        <span class="badge badge-emerald" id="auditIntegrityBadge">INTEGRITY VERIFIED</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="summary-desc">Each storage action is cryptographically chained using SHA-256 hashes ($H_n = \text{SHA256}(H_{n-1} + \text{data})$) to prevent unauthorized tampering.</p>
+                        <div class="table-container" style="max-height: 380px;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Timestamp</th>
+                                        <th>User & Role</th>
+                                        <th>Action</th>
+                                        <th>Details</th>
+                                        <th>SHA-256 Hash</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="auditTableBody">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 8: END-TO-END PIPELINE LAB ================= -->
+        <section id="tab-pipeline" class="tab-pane">
+            <div class="section-title-bar">
+                <div>
+                    <h2>Interactive End-to-End Enterprise Storage Ingestion Lab</h2>
+                    <p class="section-subtitle">Upload any document or data to witness all 6 core ISM modules execute in real-time!</p>
+                </div>
+            </div>
+
+            <div class="pipeline-upload-card">
+                <div class="upload-dropzone">
+                    <div class="upload-icon">📂</div>
+                    <h3>Drag & Drop Any File or Choose from Device</h3>
+                    <p>Supports .txt, .json, .csv, .log, .sql, .pdf, or any document</p>
+                    <input type="file" id="pipelineFileInput" class="file-input-hidden" onchange="handleFileSelected(this)">
+                    <div class="button-group" style="justify-content: center; margin-top: 15px;">
+                        <button class="btn btn-secondary" onclick="document.getElementById('pipelineFileInput').click()">Browse File...</button>
+                        <button class="btn btn-outline" onclick="loadSampleTextFile()">Use Built-in Enterprise Sample</button>
+                    </div>
+                    <div id="selectedFileBanner" class="file-selected-banner" style="display:none;"></div>
+                </div>
+
+                <div class="pipeline-options-row">
+                    <div class="select-group">
+                        <label for="pipelinePriority">Storage SLA Priority (ILM Placement):</label>
+                        <select id="pipelinePriority">
+                            <option value="HIGH">High Priority (Tier 1 NVMe SSD)</option>
+                            <option value="MEDIUM">Medium Priority (Tier 2 SAS HDD)</option>
+                            <option value="LOW">Low Priority (Tier 3 Cold Archive)</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary btn-lg" id="btnRunPipeline" onclick="executePipelineUpload()" disabled>
+                        🚀 Run Full ISM Pipeline
+                    </button>
+                </div>
+            </div>
+
+            <!-- Pipeline Execution Visual Stages -->
+            <div class="pipeline-stages-container" id="pipelineStagesContainer" style="display:none;">
+                <div class="pipeline-stage-card" id="stage1Card">
+                    <div class="stage-num">1</div>
+                    <div class="stage-info">
+                        <h4>Chunking & SHA-256 Deduplication</h4>
+                        <p id="stage1Detail">Splitting into 16-byte blocks and matching hashes...</p>
+                    </div>
+                </div>
+
+                <div class="pipeline-stage-card" id="stage2Card">
+                    <div class="stage-num">2</div>
+                    <div class="stage-info">
+                        <h4>AES-256 Encryption</h4>
+                        <p id="stage2Detail">Encrypting unique blocks with KMS master key...</p>
+                    </div>
+                </div>
+
+                <div class="pipeline-stage-card" id="stage3Card">
+                    <div class="stage-num">3</div>
+                    <div class="stage-info">
+                        <h4>ILM Tiering Placement</h4>
+                        <p id="stage3Detail">Allocating to storage tier based on SLA priority...</p>
+                    </div>
+                </div>
+
+                <div class="pipeline-stage-card" id="stage4Card">
+                    <div class="stage-num">4</div>
+                    <div class="stage-info">
+                        <h4>RAID 5/6 Striping & Parity</h4>
+                        <p id="stage4Detail">Computing XOR parity and writing stripes across drives...</p>
+                    </div>
+                </div>
+
+                <div class="pipeline-stage-card" id="stage5Card">
+                    <div class="stage-num">5</div>
+                    <div class="stage-info">
+                        <h4>Immutable Audit Log Sealed</h4>
+                        <p id="stage5Detail">Recording cryptographic event in audit chain...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pipeline Output Results -->
+            <div id="pipelineResultCard" class="glass-card" style="display:none; margin-top:20px;">
+                <div class="card-header">
+                    <h3>Pipeline Execution Complete</h3>
+                    <span class="badge badge-emerald">SUCCESSFULLY STORED</span>
+                </div>
+                <div class="card-body">
+                    <p id="pipelineSummaryText" class="pipeline-summary-lead"></p>
+                    <div class="pipeline-details-grid" id="pipelineDetailsGrid"></div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Global Toast Notification -->
+    <div id="toastNotification" class="toast"></div>
+
+    <!-- Scripts -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
